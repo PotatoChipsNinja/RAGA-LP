@@ -20,10 +20,9 @@ class MyData(InMemoryDataset):
 
     def process(self):
         ent_path = os.path.join(self.root, "entity2id.txt")
-        rel_path = os.path.join(self.root, "relation2id.txt")
-        train_path = os.path.join(self.root, "train2id.txt.txt")
-        valid_path = os.path.join(self.root, "valid2id.txt.txt")
-        test_path = os.path.join(self.root, "test2id.txt.txt")
+        train_path = os.path.join(self.root, "train2id.txt")
+        valid_path = os.path.join(self.root, "valid2id.txt")
+        test_path = os.path.join(self.root, "test2id.txt")
 
         train_set = read_txt_array(train_path, sep=' ', dtype=torch.long)
         valid_set = read_txt_array(valid_path, sep=' ', dtype=torch.long)
