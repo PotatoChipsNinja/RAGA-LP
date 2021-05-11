@@ -94,7 +94,7 @@ class GAT(nn.Module):
     
     
 class RAGA(nn.Module):
-    def __init__(self, e_hidden=100, r_hidden=100):
+    def __init__(self, rel_num, e_hidden=300, r_hidden=100):
         super(RAGA, self).__init__()
         self.gcn1 = GCN(e_hidden)
         self.highway1 = Highway(e_hidden)
@@ -104,10 +104,13 @@ class RAGA(nn.Module):
         self.gat_r_to_e = GAT_R_to_E(e_hidden, r_hidden)
         self.gat = GAT(e_hidden+2*r_hidden)
 
+        self.w_relation = nn.Parameter(torch.Tensor(rel_num, 2*e_hidden+4*r_hidden))
+        nn.init.xavier_uniform_(self.w_relation, gain=nn.init.calculate_gain('relu'))
+
     def forward(self, x_e, edge_index, rel, edge_index_all, rel_all):
         x_e = self.highway1(x_e, self.gcn1(x_e, edge_index_all))
         x_e = self.highway2(x_e, self.gcn2(x_e, edge_index_all))
         x_r = self.gat_e_to_r(x_e, edge_index, rel)
         x_e = torch.cat([x_e, self.gat_r_to_e(x_e, x_r, edge_index, rel)], dim=1)
         x_e = torch.cat([x_e, self.gat(x_e, edge_index_all)], dim=1)
-        return x_e
+        return x_e, self.w_relation
