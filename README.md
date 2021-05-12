@@ -14,10 +14,10 @@ Using [RAGA](https://arxiv.org/abs/2103.00791) encoder for link prediction task
 ## Running
 ### GPU
 ```
-CUDA_VISIBLE_DEVICES=0 python train.py --data WN18RR --emb_dim 100
+CUDA_VISIBLE_DEVICES=0 python train.py --data WN18RR
 ```
 
 ### CPU
 ```
-python train.py --cuda false --data WN18RR --emb_dim 100
+python train.py --cuda false --data WN18RR
 ```

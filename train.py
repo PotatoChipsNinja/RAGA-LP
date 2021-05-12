@@ -41,9 +41,9 @@ def test(model, data):
     '''
     print('-'*16+'Train_set'+'-'*16)
     get_hits(ent_emb, rel_emb, data, data.train_set)
+    '''
     print('-'*16+'Valid_set'+'-'*16)
     get_hits(ent_emb, rel_emb, data, data.valid_set)
-    '''
     print('-'*16+'Test_set'+'-'*16)
     get_hits(ent_emb, rel_emb, data, data.test_set)
     print()
@@ -58,13 +58,9 @@ def main(args):
         train_batch = get_train_batch(data.train_set, data.ent_num, args.k)
         loss = train(model, criterion, optimizer, data, train_batch)
         print('Epoch:', epoch+1, '/', args.epoch, '\tLoss: %.3f'%loss, '\r', end='')
-        '''
         if (epoch+1)%args.test_epoch == 0:
             print()
             test(model, data)
-        '''
-    print()
-    test(model, data)
 
 if __name__ == '__main__':
     args = parse_args()
