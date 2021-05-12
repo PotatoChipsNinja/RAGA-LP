@@ -40,6 +40,6 @@ class MyData(InMemoryDataset):
         edge_index = torch.stack([sbj, obj], dim=0)
         edge_index, rel = sort_edge_index(edge_index, rel)
 
-        data = Data(x = x, rel_num=rel_num, edge_index=edge_index, rel=rel,
+        data = Data(x = x, ent_num=ent_num, rel_num=rel_num, edge_index=edge_index, rel=rel,
                     train_set=train_set, valid_set=valid_set, test_set=test_set)
         torch.save(self.collate([data]), self.processed_paths[0])

@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from model import RAGA
 from data import MyData
 from loss import MyLoss
-from utils import add_inverse_rels, get_train_batch, get_hits
+from utils import add_inverse_rels, get_hits, get_train_batch
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -19,6 +19,7 @@ def parse_args():
     parser.add_argument("--r_hidden", type=int, default=100)
     parser.add_argument("--epoch", type=int, default=80)
     parser.add_argument("--test_epoch", type=int, default=5)
+    parser.add_argument("--k", type=int, default=5)  # 对每个正样本取 2k 个负样本，其中 k 个随机替换头实体，k 个随机替换尾实体
     args = parser.parse_args()
     return args
 
@@ -36,9 +37,8 @@ def get_emb(model, data):
 
 def train(model, criterion, optimizer, data, train_batch):
     model.train()
-    x1 = model(data.x1, data.edge_index1, data.rel1, data.edge_index_all1, data.rel_all1)
-    x2 = model(data.x2, data.edge_index2, data.rel2, data.edge_index_all2, data.rel_all2)
-    loss = criterion(x1, x2, data.train_set, train_batch)
+    ent_emb, rel_emb = model(data.x, data.edge_index, data.rel, data.edge_index_all, data.rel_all)
+    loss = criterion(ent_emb, rel_emb, train_batch)
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
@@ -61,6 +61,7 @@ def main(args):
     optimizer = torch.optim.Adam(itertools.chain(model.parameters(), iter([data.x])))
     criterion = MyLoss()
     for epoch in range(args.epoch):
+        train_batch = get_train_batch(data.train_set, data.ent_num, args.k)
         loss = train(model, criterion, optimizer, data, train_batch)
         print('Epoch:', epoch+1, '/', args.epoch, '\tLoss: %.3f'%loss, '\r', end='')
         if (epoch+1)%args.test_epoch == 0:

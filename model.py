@@ -95,6 +95,7 @@ class GAT(nn.Module):
     
 class RAGA(nn.Module):
     def __init__(self, rel_num, e_hidden=300, r_hidden=100):
+        torch.manual_seed(1)
         super(RAGA, self).__init__()
         self.gcn1 = GCN(e_hidden)
         self.highway1 = Highway(e_hidden)
