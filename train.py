@@ -39,11 +39,11 @@ def train(model, criterion, optimizer, data, train_batch):
 def test(model, data):
     ent_emb, rel_emb = get_emb(model, data)
     print('-'*16+'Train_set'+'-'*16)
-    get_hits(ent_emb, rel_emb, data, train_set=True)
+    get_hits(ent_emb, rel_emb, data, data.train_set)
     print('-'*16+'Valid_set'+'-'*16)
-    get_hits(ent_emb, rel_emb, data, valid_set=True)
+    get_hits(ent_emb, rel_emb, data, data.valid_set)
     print('-'*16+'Test_set'+'-'*16)
-    get_hits(ent_emb, rel_emb, data, test_set=True)
+    get_hits(ent_emb, rel_emb, data, data.test_set)
     print()
 
 def main(args):

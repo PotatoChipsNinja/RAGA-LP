@@ -5,23 +5,24 @@ def add_inverse_rels(edge_index, rel):
     rel_all = torch.cat([rel, rel+rel.max()+1])
     return edge_index_all, rel_all
 
-def get_candidate(all_triple, triples, ent_num):
-    raw = triples.unsqueeze(dim=1)
-    alt_sbj = raw.repeat(1, ent_num, 1)
-    alt_sbj[:, :, 0] = torch.tensor(range(ent_num))
-    alt_obj = raw.repeat(1, ent_num, 1)
-    alt_obj[:, :, 1] = torch.tensor(range(ent_num))
-    raw = torch.cat((raw, alt_sbj, alt_obj), dim=1).tolist()
+def get_candidate(triple, ent_num, all_triple):
+    raw = triple.unsqueeze(dim=0)
+    alt_sbj = raw.repeat(ent_num, 1)
+    alt_sbj[:, 0] = torch.tensor(range(ent_num))
+    alt_obj = raw.repeat(ent_num, 1)
+    alt_obj[:, 1] = torch.tensor(range(ent_num))
+    raw = torch.cat((raw, alt_sbj, alt_obj), dim=0).tolist()
     filt = raw[:]
-    for i in range(len(raw)):
-        raw[i] = {tuple(triple) for triple in raw[i]}  # 转成集合去重
-        raw[i].discard(tuple(triples[i].tolist()))     # 删除正例
-        filt[i] = raw[i] - all_triple                  # 计算 filt 集
-        raw[i] = list(raw[i])
-        filt[i] = list(filt[i])
-        raw[i].insert(0, tuple(triples[i].tolist()))   # 把正例加到最前面
-        filt[i].insert(0, tuple(triples[i].tolist()))  # 把正例加到最前面
-    return raw, filt
+
+    raw = {tuple(triple) for triple in raw} # 转成集合去重
+    raw.discard(tuple(triple.tolist()))     # 删除正例
+    filt = raw - all_triple                 # 计算 filt 集
+    raw = list(raw)
+    filt = list(filt)
+    raw.insert(0, tuple(triple.tolist()))   # 把正例加到最前面
+    filt.insert(0, tuple(triple.tolist()))  # 把正例加到最前面
+
+    return torch.tensor(raw), torch.tensor(filt)
 
 def get_emb(model, data):
     model.eval()
@@ -55,36 +56,33 @@ def get_score_triples(ent_emb, rel_emb, triples):
     o = ent_emb[triples[:, 1]]
     return torch.sum(s*r*o, dim=1)
 
-def get_hits(ent_emb, rel_emb, data, train_set=False, valid_set=False, test_set=False, hits=(1, 3, 10)):
-    if train_set:
-        raw = data.raw_train
-        filt = data.filt_train
-    elif valid_set:
-        raw = data.raw_valid
-        filt = data.filt_valid
-    elif test_set:
-        raw = data.raw_test
-        filt = data.filt_test
+def get_hits(ent_emb, rel_emb, data, triples, hits=(1, 3, 10)):
+    rank_raw = []
+    rank_filt = []
+
+    for triple in triples:
+        raw, filt = get_candidate(triple, data.ent_num, data.all_triple)
+
+        score = get_score_triples(ent_emb, rel_emb, raw)
+        _, idx = score.sort(descending=True)
+        _, rank = idx.sort()
+        rank_raw.append(rank[0] + 1)
+
+        score = get_score_triples(ent_emb, rel_emb, filt)
+        _, idx = score.sort(descending=True)
+        _, rank = idx.sort()
+        rank_filt.append(rank[0] + 1)
 
     # raw
     print('Raw:\t', end='')
-    score = get_score(ent_emb, rel_emb, torch.tensor(raw))
-    _, idx = score.sort(descending=True)
-    _, rank = idx.sort()
-    rank = rank[:, 0] + 1
+    rank = torch.tensor(rank_raw)
     for k in hits:
         print('Hits@%d: %.4f    ' % (k, (rank<=k).sum().item()/rank.size(0)), end='')
     print('MRR: %.4f' % (1/rank).mean().item())
 
     # filt.
     print('Filt.:\t', end='')
-    rank_list = []
-    for triples in filt:
-        score = get_score_triples(ent_emb, rel_emb, triples)
-        _, idx = score.sort(descending=True)
-        _, rank = idx.sort()
-        rank_list.append(rank[0] + 1)
-    rank = torch.tensor(rank_list)
+    rank = torch.tensor(rank_filt)
     for k in hits:
         print('Hits@%d: %.4f    ' % (k, (rank<=k).sum().item()/rank.size(0)), end='')
     print('MRR: %.4f' % (1/rank).mean().item())
