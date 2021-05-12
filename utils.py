@@ -76,7 +76,7 @@ def get_hits(ent_emb, rel_emb, data, triples, hits=(1, 3, 10)):
         rank_filt.append(rank[0] + 1)
 
         cnt = cnt + 1
-        print('Get rank: %d / %d (%.2f%%)' % (cnt, total, cnt/total), end='')
+        print('Get rank: %d / %d (%.2f%%)\r' % (cnt, total, cnt/total), end='')
     print()
 
     # raw

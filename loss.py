@@ -10,5 +10,5 @@ class MyLoss(nn.Module):
     def forward(self, ent_emb, rel_emb, train_batch):
         score = get_score(ent_emb, rel_emb, train_batch)
         lossFunc = nn.CrossEntropyLoss()
-        loss = lossFunc(score, torch.zeros(score.size(0), dtype=torch.long))
+        loss = lossFunc(score, torch.zeros(score.size(0), dtype=torch.long).to(score.device))
         return loss
