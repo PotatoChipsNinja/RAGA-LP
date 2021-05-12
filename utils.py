@@ -35,11 +35,11 @@ def get_train_batch(train_set, ent_num, k=5):
 
     # 随机替换头实体
     neg_sbj = pos.repeat(1, k, 1)
-    neg_sbj[:, :, 0] = (torch.rand(train_set.size(0), k)*ent_num).long()
+    neg_sbj[:, :, 0] = (torch.rand(train_set.size(0), k).to(train_set.device)*ent_num).long()
 
     # 随机替换尾实体
     neg_obj = pos.repeat(1, k, 1)
-    neg_obj[:, :, 1] = (torch.rand(train_set.size(0), k)*ent_num).long()
+    neg_obj[:, :, 1] = (torch.rand(train_set.size(0), k).to(train_set.device)*ent_num).long()
 
     train_batch = torch.cat((pos, neg_sbj, neg_obj), dim=1)
     return train_batch
