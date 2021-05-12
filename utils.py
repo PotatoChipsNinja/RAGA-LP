@@ -60,6 +60,8 @@ def get_hits(ent_emb, rel_emb, data, triples, hits=(1, 3, 10)):
     rank_raw = []
     rank_filt = []
 
+    cnt = 0
+    total = len(triples)
     for triple in triples:
         raw, filt = get_candidate(triple, data.ent_num, data.all_triple)
 
@@ -72,6 +74,10 @@ def get_hits(ent_emb, rel_emb, data, triples, hits=(1, 3, 10)):
         _, idx = score.sort(descending=True)
         _, rank = idx.sort()
         rank_filt.append(rank[0] + 1)
+
+        cnt = cnt + 1
+        print('Get rank: %d / %d (%.2f%%)' % (cnt, total, cnt/total), end='')
+    print()
 
     # raw
     print('Raw:\t', end='')
