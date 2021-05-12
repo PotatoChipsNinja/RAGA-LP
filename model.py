@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from torch_sparse import spmm
 from torch_geometric.utils import softmax, degree
 
-
 class GCN(nn.Module):
     def __init__(self, hidden):
         super(GCN, self).__init__()
@@ -17,7 +16,6 @@ class GCN(nn.Module):
         x = F.relu(spmm(edge_index[[1, 0]], norm, x.size(0), x.size(0), x))
         return x
 
-    
 class Highway(nn.Module):
     def __init__(self, x_hidden):
         super(Highway, self).__init__()
@@ -27,7 +25,6 @@ class Highway(nn.Module):
         gate = torch.sigmoid(self.lin(x1))
         x = torch.mul(gate, x2)+torch.mul(1-gate, x1)
         return x
-
 
 class GAT_E_to_R(nn.Module):
     def __init__(self, e_hidden, r_hidden):
@@ -55,7 +52,6 @@ class GAT_E_to_R(nn.Module):
         x_r = x_r_h+x_r_t
         return x_r
 
-    
 class GAT_R_to_E(nn.Module):
     def __init__(self, e_hidden, r_hidden):
         super(GAT_R_to_E, self).__init__()
@@ -74,7 +70,6 @@ class GAT_R_to_E(nn.Module):
         x_e_t = spmm(torch.cat([edge_index_t.view(1, -1), rel.view(1, -1)], dim=0), alpha, x_e.size(0), x_r.size(0), x_r)
         x = torch.cat([x_e_h, x_e_t], dim=1)
         return x
-    
 
 class GAT(nn.Module):
     def __init__(self, hidden):
@@ -91,8 +86,7 @@ class GAT(nn.Module):
         alpha = softmax(F.leaky_relu(e).float(), edge_index_i)
         x = F.relu(spmm(edge_index[[1, 0]], alpha, x.size(0), x.size(0), x))
         return x
-    
-    
+
 class RAGA(nn.Module):
     def __init__(self, rel_num, e_hidden=300, r_hidden=100):
         torch.manual_seed(1)
