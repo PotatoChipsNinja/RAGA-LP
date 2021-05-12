@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from model import RAGA
 from data import MyData
 from loss import MyLoss
-from utils import add_inverse_rels, get_hits, get_train_batch
+from utils import add_inverse_rels, get_emb, get_hits, get_train_batch
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -27,12 +27,6 @@ def init_data(args, device):
     data.edge_index_all, data.rel_all = add_inverse_rels(data.edge_index, data.rel)
     return data
 
-def get_emb(model, data):
-    model.eval()
-    with torch.no_grad():
-        ent_emb, rel_emb = model(data.x, data.edge_index, data.rel, data.edge_index_all, data.rel_all)
-    return ent_emb, rel_emb
-
 def train(model, criterion, optimizer, data, train_batch):
     model.train()
     ent_emb, rel_emb = model(data.x, data.edge_index, data.rel, data.edge_index_all, data.rel_all)
@@ -45,11 +39,11 @@ def train(model, criterion, optimizer, data, train_batch):
 def test(model, data):
     ent_emb, rel_emb = get_emb(model, data)
     print('-'*16+'Train_set'+'-'*16)
-    get_hits(ent_emb, rel_emb, data.train_set)
+    get_hits(ent_emb, rel_emb, data, train_set=True)
     print('-'*16+'Valid_set'+'-'*16)
-    get_hits(ent_emb, rel_emb, data.valid_set)
+    get_hits(ent_emb, rel_emb, data, valid_set=True)
     print('-'*16+'Test_set'+'-'*16)
-    get_hits(ent_emb, rel_emb, data.test_set)
+    get_hits(ent_emb, rel_emb, data, test_set=True)
     print()
 
 def main(args):

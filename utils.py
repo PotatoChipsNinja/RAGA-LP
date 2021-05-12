@@ -5,6 +5,30 @@ def add_inverse_rels(edge_index, rel):
     rel_all = torch.cat([rel, rel+rel.max()+1])
     return edge_index_all, rel_all
 
+def get_candidate(all_triple, triples, ent_num):
+    raw = triples.unsqueeze(dim=1)
+    alt_sbj = raw.repeat(1, ent_num, 1)
+    alt_sbj[:, :, 0] = torch.tensor(range(ent_num))
+    alt_obj = raw.repeat(1, ent_num, 1)
+    alt_obj[:, :, 1] = torch.tensor(range(ent_num))
+    raw = torch.cat((raw, alt_sbj, alt_obj), dim=1).tolist()
+    filt = raw[:]
+    for i in range(len(raw)):
+        raw[i] = {tuple(triple) for triple in raw[i]}  # 转成集合去重
+        raw[i].discard(tuple(triples[i].tolist()))     # 删除正例
+        filt[i] = raw[i] - all_triple                  # 计算 filt 集
+        raw[i] = list(raw[i])
+        filt[i] = list(filt[i])
+        raw[i].insert(0, tuple(triples[i].tolist()))   # 把正例加到最前面
+        filt[i].insert(0, tuple(triples[i].tolist()))  # 把正例加到最前面
+    return raw, filt
+
+def get_emb(model, data):
+    model.eval()
+    with torch.no_grad():
+        ent_emb, rel_emb = model(data.x, data.edge_index, data.rel, data.edge_index_all, data.rel_all)
+    return ent_emb, rel_emb
+
 def get_train_batch(train_set, ent_num, k=5):
     pos = train_set.unsqueeze(dim=1)
 
@@ -25,48 +49,42 @@ def get_score(ent_emb, rel_emb, batch):
     o = ent_emb[batch[:, :, 1]]
     return torch.sum(s*r*o, dim=2)
 
-def get_hits(ent_emb, rel_emb, triple, Hn_nums=(1, 10, 50)):
-    # TODO
-    pass
+def get_score_triples(ent_emb, rel_emb, triples):
+    s = ent_emb[triples[:, 0]]
+    r = rel_emb[triples[:, 2]]
+    o = ent_emb[triples[:, 1]]
+    return torch.sum(s*r*o, dim=1)
 
-'''
-def get_hits(x1, x2, pair, dist='L1', Hn_nums=(1, 10)):
-    pair_num = pair.size(0)
-    S = torch.cdist(x1[pair[:, 0]], x2[pair[:, 1]], p=1)
-    print('Left:\t',end='')
-    for k in Hn_nums:
-        pred_topk= S.topk(k, largest=False)[1]
-        Hk = (pred_topk == torch.arange(pair_num, device=S.device).view(-1, 1)).sum().item()/pair_num
-        print('Hits@%d: %.2f%%    ' % (k, Hk*100),end='')
-    rank = torch.where(S.sort()[1] == torch.arange(pair_num, device=S.device).view(-1, 1))[1].float()
-    MRR = (1/(rank+1)).mean().item()
-    print('MRR: %.3f' % MRR)
-    print('Right:\t',end='')
-    for k in Hn_nums:
-        pred_topk= S.t().topk(k, largest=False)[1]
-        Hk = (pred_topk == torch.arange(pair_num, device=S.device).view(-1, 1)).sum().item()/pair_num
-        print('Hits@%d: %.2f%%    ' % (k, Hk*100),end='')
-    rank = torch.where(S.t().sort()[1] == torch.arange(pair_num, device=S.device).view(-1, 1))[1].float()
-    MRR = (1/(rank+1)).mean().item()
-    print('MRR: %.3f' % MRR)
+def get_hits(ent_emb, rel_emb, data, train_set=False, valid_set=False, test_set=False, hits=(1, 3, 10)):
+    if train_set:
+        raw = data.raw_train
+        filt = data.filt_train
+    elif valid_set:
+        raw = data.raw_valid
+        filt = data.filt_valid
+    elif test_set:
+        raw = data.raw_test
+        filt = data.filt_test
 
-    
-def get_hits_stable(x1, x2, pair):
-    pair_num = pair.size(0)
-    S = -torch.cdist(x1[pair[:, 0]], x2[pair[:, 1]], p=1).cpu()
-    #index = S.flatten().argsort(descending=True)
-    index = (S.softmax(1)+S.softmax(0)).flatten().argsort(descending=True)
-    index_e1 = index//pair_num
-    index_e2 = index%pair_num
-    aligned_e1 = torch.zeros(pair_num, dtype=torch.bool)
-    aligned_e2 = torch.zeros(pair_num, dtype=torch.bool)
-    true_aligned = 0
-    for _ in range(pair_num*100):
-        if aligned_e1[index_e1[_]] or aligned_e2[index_e2[_]]:
-            continue
-        if index_e1[_] == index_e2[_]:
-            true_aligned += 1
-        aligned_e1[index_e1[_]] = True
-        aligned_e2[index_e2[_]] = True
-    print('Both:\tHits@Stable: %.2f%%    ' % (true_aligned/pair_num*100))
-'''
+    # raw
+    print('Raw:\t', end='')
+    score = get_score(ent_emb, rel_emb, torch.tensor(raw))
+    _, idx = score.sort(descending=True)
+    _, rank = idx.sort()
+    rank = rank[:, 0] + 1
+    for k in hits:
+        print('Hits@%d: %.4f    ' % (k, (rank<=k).sum().item()/rank.size(0)), end='')
+    print('MRR: %.4f' % (1/rank).mean().item())
+
+    # filt.
+    print('Filt.:\t', end='')
+    rank_list = []
+    for triples in filt:
+        score = get_score_triples(ent_emb, rel_emb, triples)
+        _, idx = score.sort(descending=True)
+        _, rank = idx.sort()
+        rank_list.append(rank[0] + 1)
+    rank = torch.tensor(rank_list)
+    for k in hits:
+        print('Hits@%d: %.4f    ' % (k, (rank<=k).sum().item()/rank.size(0)), end='')
+    print('MRR: %.4f' % (1/rank).mean().item())
