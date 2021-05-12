@@ -22,7 +22,7 @@ def get_candidate(triple, ent_num, all_triple):
     raw.insert(0, tuple(triple.tolist()))   # 把正例加到最前面
     filt.insert(0, tuple(triple.tolist()))  # 把正例加到最前面
 
-    return torch.tensor(raw), torch.tensor(filt)
+    return torch.tensor(raw).to(triple.device), torch.tensor(filt).to(triple.device)
 
 def get_emb(model, data):
     model.eval()
