@@ -1,3 +1,4 @@
+import math
 import argparse
 import itertools
 
@@ -17,6 +18,7 @@ def parse_args():
     parser.add_argument("--r_hidden", type=int, default=100)
     parser.add_argument("--epoch", type=int, default=80)
     parser.add_argument("--test_epoch", type=int, default=5)
+    parser.add_argument("--batch_size", type=int, default=2048)
     parser.add_argument("--k", type=int, default=5)  # 对每个正样本取 2k 个负样本，其中 k 个随机替换头实体，k 个随机替换尾实体
     args = parser.parse_args()
     return args
@@ -54,9 +56,15 @@ def main(args):
     model = RAGA(data.rel_num, args.e_hidden, args.r_hidden).to(device)
     optimizer = torch.optim.Adam(itertools.chain(model.parameters(), iter([data.x])))
     criterion = MyLoss()
+    batch_num = math.ceil(data.train_set.size(0) / args.batch_size)
     for epoch in range(args.epoch):
-        train_batch = get_train_batch(data.train_set, data.ent_num, args.k)
-        loss = train(model, criterion, optimizer, data, train_batch)
+        losses = []
+        for iteration in range(batch_num):
+            batch = data.train_set[iteration*args.batch_size : (iteration+1)*args.batch_size]
+            train_batch = get_train_batch(batch, data.ent_num, args.k)
+            loss = train(model, criterion, optimizer, data, train_batch)
+            losses.append(loss)
+        loss = torch.tensor(losses).mean().item()
         print('Epoch:', epoch+1, '/', args.epoch, '    Loss: %.3f'%loss, '\r', end='')
         if (epoch+1)%args.test_epoch == 0:
             print()
