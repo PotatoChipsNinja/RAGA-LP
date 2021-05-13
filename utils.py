@@ -5,16 +5,17 @@ def add_inverse_rels(edge_index, rel):
     rel_all = torch.cat([rel, rel+rel.max()+1])
     return edge_index_all, rel_all
 
+# 产生所有头实体替换和尾实体替换的三元组，其中正例放在第一个
 def get_candidate(triple, ent_num, all_triple):
     raw = triple.unsqueeze(dim=0)
     alt_sbj = raw.repeat(ent_num, 1)
     alt_sbj[:, 0] = torch.tensor(range(ent_num))
     alt_obj = raw.repeat(ent_num, 1)
     alt_obj[:, 1] = torch.tensor(range(ent_num))
-    raw = torch.cat((raw, alt_sbj, alt_obj), dim=0).tolist()
+    raw = torch.cat((alt_sbj, alt_obj), dim=0).tolist()
     filt = raw[:]
 
-    raw = {tuple(triple) for triple in raw} # 转成集合去重
+    raw = {tuple(tri) for tri in raw} # 转成集合去重
     raw.discard(tuple(triple.tolist()))     # 删除正例
     filt = raw - all_triple                 # 计算 filt 集
     raw = list(raw)
@@ -23,6 +24,50 @@ def get_candidate(triple, ent_num, all_triple):
     filt.insert(0, tuple(triple.tolist()))  # 把正例加到最前面
 
     return torch.tensor(raw).to(triple.device), torch.tensor(filt).to(triple.device)
+
+# 产生所有头实体替换的三元组，其中正例放在第一个
+def get_candidate_s(triple, ent_num, all_triple):
+    triple_2_dim = triple.unsqueeze(dim=0)
+    alt_sbj = triple_2_dim.repeat(ent_num, 1)
+    alt_sbj[:, 0] = torch.tensor(range(ent_num))
+    raw = alt_sbj.tolist()
+    filt = raw[:]
+
+    raw = {tuple(tri) for tri in raw}       # 转成集合去重
+    raw.discard(tuple(triple.tolist()))     # 删除正例
+    filt = raw - all_triple                 # 计算 filt 集
+
+    # 转换回 tensor
+    raw = torch.tensor(list(raw)).to(triple.device)
+    filt = torch.tensor(list(filt)).to(triple.device)
+
+    # 把正例加到最前面
+    raw = torch.cat((triple_2_dim, raw), dim=0)
+    filt = torch.cat((triple_2_dim, filt), dim=0)
+
+    return raw, filt
+
+# 产生所有尾实体替换的三元组，其中正例放在第一个
+def get_candidate_o(triple, ent_num, all_triple):
+    triple_2_dim = triple.unsqueeze(dim=0)
+    alt_obj = triple_2_dim.repeat(ent_num, 1)
+    alt_obj[:, 1] = torch.tensor(range(ent_num))
+    raw = alt_obj.tolist()
+    filt = raw[:]
+
+    raw = {tuple(tri) for tri in raw}       # 转成集合去重
+    raw.discard(tuple(triple.tolist()))     # 删除正例
+    filt = raw - all_triple                 # 计算 filt 集
+
+    # 转换回 tensor
+    raw = torch.tensor(list(raw)).to(triple.device)
+    filt = torch.tensor(list(filt)).to(triple.device)
+
+    # 把正例加到最前面
+    raw = torch.cat((triple_2_dim, raw), dim=0)
+    filt = torch.cat((triple_2_dim, filt), dim=0)
+
+    return raw, filt
 
 def get_emb(model, data):
     model.eval()
@@ -63,7 +108,20 @@ def get_hits(ent_emb, rel_emb, data, triples, hits=(1, 3, 10)):
     cnt = 0
     total = len(triples)
     for triple in triples:
-        raw, filt = get_candidate(triple, data.ent_num, data.all_triple)
+        raw, filt = get_candidate_s(triple, data.ent_num, data.all_triple)
+
+        score = get_score_triples(ent_emb, rel_emb, raw)
+        _, idx = score.sort(descending=True)
+        _, rank = idx.sort()
+        rank_raw.append(rank[0] + 1)
+
+        score = get_score_triples(ent_emb, rel_emb, filt)
+        _, idx = score.sort(descending=True)
+        _, rank = idx.sort()
+        rank_filt.append(rank[0] + 1)
+
+
+        raw, filt = get_candidate_o(triple, data.ent_num, data.all_triple)
 
         score = get_score_triples(ent_emb, rel_emb, raw)
         _, idx = score.sort(descending=True)
