@@ -59,8 +59,9 @@ def main(args):
     batch_num = math.ceil(data.train_set.size(0) / args.batch_size)
     for epoch in range(args.epoch):
         losses = []
+        train_set = data.train_set[torch.randperm(data.train_set.size(0))] # 随机打乱训练集
         for iteration in range(batch_num):
-            batch = data.train_set[iteration*args.batch_size : (iteration+1)*args.batch_size]
+            batch = train_set[iteration*args.batch_size : (iteration+1)*args.batch_size]
             train_batch = get_train_batch(batch, data.ent_num, args.k)
             loss = train(model, criterion, optimizer, data, train_batch)
             losses.append(loss)
