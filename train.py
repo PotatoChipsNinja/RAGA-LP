@@ -57,6 +57,7 @@ def main(args):
     optimizer = torch.optim.Adam(itertools.chain(model.parameters(), iter([data.x])))
     criterion = MyLoss()
     batch_num = math.ceil(data.train_set.size(0) / args.batch_size)
+    avg_loss = 0
     for epoch in range(args.epoch):
         losses = []
         train_set = data.train_set[torch.randperm(data.train_set.size(0))] # 随机打乱训练集
@@ -65,8 +66,9 @@ def main(args):
             train_batch = get_train_batch(batch, data.ent_num, args.k)
             loss = train(model, criterion, optimizer, data, train_batch)
             losses.append(loss)
-        loss = torch.tensor(losses).mean().item()
-        print('Epoch:', epoch+1, '/', args.epoch, '    Loss: %.3f'%loss, '\r', end='')
+            print('Epoch: %d / %d, Iteration: %d / %d, Loss: %.3f, Avg_Loss: %.3f\r'
+                % (epoch+1, args.epoch, iteration+1, batch_num, loss, avg_loss), end='')
+        avg_loss = torch.tensor(losses).mean().item()
         if (epoch+1)%args.test_epoch == 0:
             print()
             test(model, data)
