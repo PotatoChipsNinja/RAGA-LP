@@ -25,7 +25,7 @@ def get_hits(encoder, decoder, triples, triple_dict, hits=(1, 3, 10)):
         # filt.
         for i, triple in enumerate(triples.tolist()):
             if (triple[0], triple[2]) in triple_dict:
-                temp = pred[i][triple[1]]
+                temp = pred[i][triple[1]].item()
                 pred[i][triple_dict[(triple[0], triple[2])]] = 0
                 pred[i][triple[1]] = temp
         _, idx = pred.sort(descending=True)
