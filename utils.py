@@ -1,4 +1,5 @@
 import torch
+import math
 
 def add_inverse_rels(edge_index, rel):
     edge_index_all = torch.cat([edge_index, edge_index[[1,0]]], dim=1)

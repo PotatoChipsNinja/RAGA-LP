@@ -43,7 +43,7 @@ def train(encoder, decoder, criterion, optimizer, args, data, train_batch):
     loss = criterion(pred, e2_multi)
     loss.backward()
     optimizer.step()
-    return loss
+    return loss.item()
 
 def main(args):
     device = 'cuda' if args.cuda and torch.cuda.is_available() else 'cpu'
