@@ -16,7 +16,7 @@ def get_hits(encoder, decoder, triples, triple_dict, hits=(1, 3, 10)):
         # raw
         _, idx = pred.sort(descending=True)
         _, rank = idx.sort()
-        rank = rank.gather(dim=1, index=o.view(-1, 1))
+        rank = rank.gather(dim=1, index=o.view(-1, 1)) + 1
         print('Raw:\t', end='')
         for k in hits:
             print('Hits@%d: %.4f    ' % (k, (rank<=k).sum().item()/rank.size(0)), end='')
@@ -30,7 +30,7 @@ def get_hits(encoder, decoder, triples, triple_dict, hits=(1, 3, 10)):
                 pred[i][triple[1]] = temp
         _, idx = pred.sort(descending=True)
         _, rank = idx.sort()
-        rank = rank.gather(dim=1, index=o.view(-1, 1))
+        rank = rank.gather(dim=1, index=o.view(-1, 1)) + 1
         print('Filt.:\t', end='')
         for k in hits:
             print('Hits@%d: %.4f    ' % (k, (rank<=k).sum().item()/rank.size(0)), end='')
