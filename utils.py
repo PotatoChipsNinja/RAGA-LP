@@ -57,7 +57,7 @@ def get_hits(encoder, decoder, triples, triple_dict, hits=(1, 3, 10), batch_size
             rank_raw = torch.cat([rank_raw, rank.gather(dim=1, index=o[batch_id*batch_size : (batch_id+1)*batch_size].view(-1, 1))])
 
             # filt.
-            for i, triple in enumerate(triples.tolist()):
+            for i, triple in enumerate(triples[batch_id*batch_size : (batch_id+1)*batch_size].tolist()):
                 if (triple[0], triple[2]) in triple_dict:
                     temp = pred[i][triple[1]].item()
                     pred[i][triple_dict[(triple[0], triple[2])]] = 0
