@@ -21,7 +21,7 @@ def get_hits(encoder, decoder, triples, triple_dict, hits=(1, 3, 10), batch_size
             # raw
             _, idx = pred.sort(descending=True)
             _, rank = idx.sort()
-            rank_raw = torch.cat([rank_raw, rank.gather(dim=1, index=o.view(-1, 1))])
+            rank_raw = torch.cat([rank_raw, rank.gather(dim=1, index=o[batch_id*batch_size : (batch_id+1)*batch_size].view(-1, 1))])
 
             # filt.
             for i, triple in enumerate(triples.tolist()):
