@@ -31,7 +31,7 @@ def get_hits(encoder, decoder, triples, triple_dict, hits=(1, 3, 10), batch_size
                     pred[i][triple[1]] = temp
             _, idx = pred.sort(descending=True)
             _, rank = idx.sort()
-            rank_filt = torch.cat([rank_filt, rank.gather(dim=1, index=o.view(-1, 1))])
+            rank_filt = torch.cat([rank_filt, rank.gather(dim=1, index=o[batch_id*batch_size : (batch_id+1)*batch_size].view(-1, 1))])
 
         rank_raw = rank_raw + 1
         rank_filt = rank_filt + 1
