@@ -28,7 +28,7 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def train(model, criterion, optimizer, args, data, train_batch):
+def train(encoder, decoder, criterion, optimizer, args, data, train_batch):
     encoder.train()
     decoder.train()
     optimizer.zero_grad()
