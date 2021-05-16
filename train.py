@@ -58,6 +58,7 @@ def main(args):
 
     batch_num = math.ceil(data.train_set.size(0) / args.batch_size)
     epoch_losses = np.empty(0)
+    avg_loss = np.float64(0)
     for epoch in range(args.epoch):
         losses = np.empty(0)
         train_set = data.train_set[torch.randperm(data.train_set.size(0))] # 随机打乱训练集
