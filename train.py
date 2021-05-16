@@ -2,6 +2,7 @@ import math
 import argparse
 import itertools
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -56,17 +57,19 @@ def main(args):
     criterion = nn.BCELoss()
 
     batch_num = math.ceil(data.train_set.size(0) / args.batch_size)
-    avg_loss = 0
+    epoch_losses = np.empty(0)
     for epoch in range(args.epoch):
-        losses = []
+        losses = np.empty(0)
         train_set = data.train_set[torch.randperm(data.train_set.size(0))] # 随机打乱训练集
         for iteration in range(batch_num):
             train_batch = train_set[iteration*args.batch_size : (iteration+1)*args.batch_size]
             loss = train(encoder, decoder, criterion, optimizer, args, data, train_batch)
-            losses.append(loss)
-            print('Epoch: %d / %d, Iteration: %d / %d, Loss: %.3f, Avg_Loss: %.3f\r'
+            losses = np.append(losses, loss)
+            print('Epoch: %d / %d, Iteration: %d / %d, Loss: %.3e, Avg_Loss: %.3e    \r'
                 % (epoch+1, args.epoch, iteration+1, batch_num, loss, avg_loss), end='')
-        avg_loss = torch.tensor(losses).mean().item()
+        avg_loss = losses.mean()
+        epoch_losses = np.append(epoch_losses, avg_loss)
+        np.save('loss.npy', epoch_losses)
         if (epoch+1)%args.test_epoch == 0:
             print()
             get_hits(encoder, decoder, data.test_set, data.triple_dict, batch_size=args.test_batch_size)
