@@ -101,10 +101,9 @@ class RAGA(nn.Module):
 
         self.x = nn.Embedding(ent_num, e_hidden)
         nn.init.xavier_normal_(self.x.weight.data)
-        self.x = self.x.weight
 
     def forward(self, edge_index, rel, edge_index_all, rel_all):
-        x_e = self.highway1(self.x, self.gcn1(self.x, edge_index_all))
+        x_e = self.highway1(self.x.weight, self.gcn1(self.x.weight, edge_index_all))
         x_e = self.highway2(x_e, self.gcn2(x_e, edge_index_all))
         x_r = self.gat_e_to_r(x_e, edge_index, rel)
         x_e = torch.cat([x_e, self.gat_r_to_e(x_e, x_r, edge_index, rel)], dim=1)
