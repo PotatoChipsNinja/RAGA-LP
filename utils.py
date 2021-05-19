@@ -39,12 +39,12 @@ def get_hits(encoder, decoder, triples, triple_dict, hits=(1, 3, 10)):
         print('MRR: %.4f' % (1/rank).mean().item())
 '''
 
-def get_hits(encoder, decoder, triples, triple_dict, hits=(1, 3, 10), batch_size=128):
+def get_hits(encoder, decoder, triples, data, hits=(1, 3, 10), batch_size=128):
     encoder.eval()
     decoder.eval()
     with torch.no_grad():
         s, o, r = triples.t()
-        emb_ent = encoder()
+        emb_ent = encoder(data.edge_index, data.rel, data.edge_index_all, data.rel_all)
 
         batch_num = math.ceil(triples.size(0) / batch_size)
         rank_raw = torch.tensor([], dtype=torch.long).to(triples.device)
@@ -58,9 +58,9 @@ def get_hits(encoder, decoder, triples, triple_dict, hits=(1, 3, 10), batch_size
 
             # filt.
             for i, triple in enumerate(triples[batch_id*batch_size : (batch_id+1)*batch_size].tolist()):
-                if (triple[0], triple[2]) in triple_dict:
+                if (triple[0], triple[2]) in data.triple_dict:
                     temp = pred[i][triple[1]].item()
-                    pred[i][triple_dict[(triple[0], triple[2])]] = 0
+                    pred[i][data.triple_dict[(triple[0], triple[2])]] = 0
                     pred[i][triple[1]] = temp
             _, idx = pred.sort(descending=True)
             _, rank = idx.sort()

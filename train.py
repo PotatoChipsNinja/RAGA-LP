@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from model import RAGA, ConvE
+from model import RAGA, NullEncoder, ConvE
 from data import MyData
 from utils import get_hits
 
@@ -15,6 +15,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", action="store_true", default=True)
     parser.add_argument("--data", choices=["WN18RR", "FB15k-237"])
+    parser.add_argument("--without-RAGA", action="store_true", default=False) # 不使用编码器，即 NullEncoder 模型
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument("--e-hidden", type=int, default=120)
     parser.add_argument("--r-hidden", type=int, default=40)
@@ -41,7 +42,7 @@ def train(encoder, decoder, criterion, optimizer, args, data, train_batch):
     # label smoothing
     e2_multi = ((1.0-args.label_smoothing)*e2_multi) + (1.0/e2_multi.size(1))
 
-    emb_ent = encoder()
+    emb_ent = encoder(data.edge_index, data.rel, data.edge_index_all, data.rel_all)
     pred = decoder(emb_ent, e1, rel)
     loss = criterion(pred, e2_multi)
     loss.backward()
@@ -51,7 +52,11 @@ def train(encoder, decoder, criterion, optimizer, args, data, train_batch):
 def main(args):
     device = 'cuda' if args.cuda and torch.cuda.is_available() else 'cpu'
     data = MyData(args.data)[0].to(device)
-    encoder = RAGA(args, data.ent_num).to(device)
+
+    if args.without_RAGA:
+        encoder = NullEncoder(data.ent_num, args.e_hidden, args.r_hidden).to(device)
+    else:
+        encoder = RAGA(data.ent_num, args.e_hidden, args.r_hidden).to(device)
     decoder = ConvE(args, data.ent_num, data.rel_num).to(device)
     optimizer = torch.optim.Adam(itertools.chain(encoder.parameters(), decoder.parameters()), lr=args.lr)
     criterion = nn.BCELoss()
@@ -73,7 +78,7 @@ def main(args):
         np.save('loss.npy', epoch_losses)
         if (epoch+1)%args.test_epoch == 0:
             print()
-            get_hits(encoder, decoder, data.test_set, data.triple_dict, batch_size=args.test_batch_size)
+            get_hits(encoder, decoder, data.test_set, data, batch_size=args.test_batch_size)
 
 if __name__ == '__main__':
     args = parse_args()
