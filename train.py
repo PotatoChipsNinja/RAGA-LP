@@ -42,8 +42,8 @@ def train(encoder, decoder, criterion, optimizer, args, data, train_batch):
     # label smoothing
     e2_multi = ((1.0-args.label_smoothing)*e2_multi) + (1.0/e2_multi.size(1))
 
-    emb_ent = encoder(data.edge_index, data.rel, data.edge_index_all, data.rel_all)
-    pred = decoder(emb_ent, e1, rel)
+    emb_ent, emb_rel = encoder(data.edge_index, data.rel, data.edge_index_all, data.rel_all)
+    pred = decoder(emb_ent, emb_rel, e1, rel)
     loss = criterion(pred, e2_multi)
     loss.backward()
     optimizer.step()

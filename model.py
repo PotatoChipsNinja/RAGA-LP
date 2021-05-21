@@ -108,27 +108,28 @@ class RAGA(nn.Module):
         x_r = self.gat_e_to_r(x_e, edge_index, rel)
         x_e = torch.cat([x_e, self.gat_r_to_e(x_e, x_r, edge_index, rel)], dim=1)
         x_e = torch.cat([x_e, self.gat(x_e, edge_index_all)], dim=1)
-        return x_e
+        return x_e, x_r
 
 class NullEncoder(nn.Module):
     def __init__(self, ent_num, e_hidden, r_hidden):
         super(NullEncoder, self).__init__()
         self.emb_ent = nn.Embedding(ent_num, 2*e_hidden+4*r_hidden)
+        self.emb_rel = nn.Embedding(rel_num, args.r_hidden)
         nn.init.xavier_normal_(self.emb_ent.weight.data)
+        nn.init.xavier_normal_(self.emb_rel.weight.data)
 
     def forward(self, edge_index, rel, edge_index_all, rel_all):
-        return self.emb_ent.weight
+        return self.emb_ent.weight, self.emb_rel.weight
 
 class ConvE(nn.Module):
     def __init__(self, args, ent_num, rel_num):
         super(ConvE, self).__init__()
-        self.emb_rel = nn.Embedding(rel_num, 2*args.e_hidden+4*args.r_hidden)
-        nn.init.xavier_normal_(self.emb_rel.weight.data)
         self.inp_drop = nn.Dropout(args.input_drop)
         self.hidden_drop = nn.Dropout(args.hidden_drop)
         self.feature_map_drop = nn.Dropout2d(args.feat_drop)
         self.emb_dim1 = args.embedding_shape1
-        self.emb_dim2 = (2*args.e_hidden+4*args.r_hidden) // self.emb_dim1
+        self.emb_dim2_ent = (2*args.e_hidden+4*args.r_hidden) // self.emb_dim1
+        self.emb_dim2_rel = (args.r_hidden) // self.emb_dim1
 
         self.conv1 = nn.Conv2d(1, 32, (3, 3), 1, 0, bias=True)
         self.bn0 = nn.BatchNorm2d(1)
@@ -137,9 +138,9 @@ class ConvE(nn.Module):
         self.register_parameter('b', nn.Parameter(torch.zeros(ent_num)))
         self.fc = nn.Linear(args.hidden_size, 2*args.e_hidden+4*args.r_hidden)
 
-    def forward(self, emb_ent, e1, rel):
-        e1_embedded = emb_ent[e1].view(-1, 1, self.emb_dim1, self.emb_dim2)
-        rel_embedded = self.emb_rel(rel).view(-1, 1, self.emb_dim1, self.emb_dim2)
+    def forward(self, emb_ent, emb_rel, e1, rel):
+        e1_embedded = emb_ent[e1].view(-1, 1, self.emb_dim2_ent, self.emb_dim1)
+        rel_embedded = emb_rel[rel].view(-1, 1, self.emb_dim2_rel, self.emb_dim1)
 
         stacked_inputs = torch.cat([e1_embedded, rel_embedded], 2)
 

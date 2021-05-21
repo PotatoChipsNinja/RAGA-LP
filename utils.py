@@ -44,13 +44,13 @@ def get_hits(encoder, decoder, triples, data, hits=(1, 3, 10), batch_size=128):
     decoder.eval()
     with torch.no_grad():
         s, o, r = triples.t()
-        emb_ent = encoder(data.edge_index, data.rel, data.edge_index_all, data.rel_all)
+        emb_ent, emb_rel = encoder(data.edge_index, data.rel, data.edge_index_all, data.rel_all)
 
         batch_num = math.ceil(triples.size(0) / batch_size)
         rank_raw = torch.tensor([], dtype=torch.long).to(triples.device)
         rank_filt = torch.tensor([], dtype=torch.long).to(triples.device)
         for batch_id in range(batch_num):
-            pred = decoder(emb_ent, s[batch_id*batch_size : (batch_id+1)*batch_size], r[batch_id*batch_size : (batch_id+1)*batch_size])
+            pred = decoder(emb_ent, emb_rel, s[batch_id*batch_size : (batch_id+1)*batch_size], r[batch_id*batch_size : (batch_id+1)*batch_size])
             # raw
             _, idx = pred.sort(descending=True)
             _, rank = idx.sort()
